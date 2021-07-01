@@ -1,0 +1,4 @@
+apiVersion: v1
+name: agora-deployment
+description: A Helm chart that renders an Argo CD application that deployment resources for an Agora service
+version: 1.0.0
