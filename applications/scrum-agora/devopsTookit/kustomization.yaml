@@ -5,6 +5,3 @@ helmChartInflationGenerator:
 - chartName: agora-deployment
   chartHome: ../../../helm/
   values: deployment-params.yaml
-- chartName: traffic-management
-  chartHome: ../../../helm/
-  values: deployment-params.yaml

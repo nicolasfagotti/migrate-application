@@ -1,1 +1,2 @@
-serviceName: "helloDS"
+serviceName: "devopsTookit"
+serviceImage: "vfarcic/devops-toolkit-series:latest"

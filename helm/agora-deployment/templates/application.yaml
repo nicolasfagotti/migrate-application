@@ -1,82 +1,49 @@
 {{- if .Values.serviceImage }}
 apiVersion: argoproj.io/v1alpha1
-kind: Application
+kind: Rollout
 metadata:
-  name: {{ .Values.serviceName | lower }}
-  namespace: argocd
-  annotations:
-    argocd.argoproj.io/sync-wave: "10"
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
+  name: {{ .Values.serviceName }}
+  labels:
+    app: {{ .Values.serviceName }}
 spec:
-  project: upwork-services
-  source:
-    repoURL: ssh://git@stash.odesk.com:7999/agora/helm-service-deployment.git
-    targetRevision: 1.0.3
-    path: .
-    helm:
-      parameters:
-        - name: serviceName
-          value: {{ .Values.serviceName }}
-        - name: serviceImage
-          value: {{ .Values.serviceImage }}
-        {{- if .Values.configInitContainerImage }}
-        - name: configInitContainerImage
-          value: {{ .Values.configInitContainerImage }}
-        {{- end }}
-        - name: vipAddress
-          value: "{{ .Values.serviceName }}.{{ .Values.vipAddressBase }}"
-        - name: environment
-          value: staging
-        - name: iamRole
-          value: "{{ .Values.iamRole }}"
-        - name: serviceMemoryRequestMB"
-          value: "{{ .Values.serviceMemoryRequestMB }}"
-        - name: serviceXmsMB
-          value: "{{ .Values.serviceXmsMB }}"
-        - name: serviceXmxMB
-          value: "{{ .Values.serviceXmxMB }}"
-        - name: serviceCpuRequest
-          value: "{{ .Values.serviceCpuRequest }}"
-        - name: autoscale.minReplicas
-          value: "{{ .Values.autoscale.minReplicas }}"
-        - name: autoscale.maxReplicas
-          value: "{{ .Values.autoscale.maxReplicas }}"
-        - name: meshInstanceEurekaWeight
-          value: "{{ .Values.meshInstanceEurekaWeight }}"
-        - name: hostSuffixInEureka
-          value: mesh.staging.platform.usw2.upwork
-        - name: configServiceRootUrl
-          value: http://configuration.staging.platform.usw2.upwork/
-        - name: kmsEndpoint
-          value: https://kms.us-west-2.amazonaws.com/
-        - name: eurekaServerDomainName
-          value: eureka.staging.platform.usw2.upwork
-        - name: eurekaRegion
-          value: us-west-2
-        - name: startupProbe.path
-          value: /_ping
-        - name: startupProbe.port
-          value: "8080"
-        - name: startupProbe.failureThreshold
-          value: "{{ .Values.startupProbe.failureThreshold }}"
-        - name: startupProbe.periodSeconds
-          value: "{{ .Values.startupProbe.periodSeconds }}"
-        - name: readinessProbe.initialDelaySeconds
-          value: "{{ .Values.readinessProbe.initialDelaySeconds }}"
-        - name: readinessProbe.periodSeconds
-          value: "{{ .Values.readinessProbe.periodSeconds }}"
-        - name: livenessProbe.initialDelaySeconds
-          value: "{{ .Values.livenessProbe.initialDelaySeconds }}"
-        - name: livenessProbe.periodSeconds
-          value: "{{ .Values.livenessProbe.periodSeconds }}"
-  destination:
-    server: https://93537C4F2D91AD007C58B494EDD3D829.gr7.us-west-2.eks.amazonaws.com
-    namespace: upwork-services
-  syncPolicy:
-    automated:
-      selfHeal: true
-      prune: true
-    syncOptions:
-      - CreateNamespace=true
+  selector:
+    matchLabels:
+      app: {{ .Values.serviceName }}
+  replicas: 4
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.serviceName }}
+    spec:
+      containers:
+      - name: {{ .Values.serviceName }}
+        image: {{ .Values.serviceImage }}
+        ports:
+        - containerPort: 80
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+        resources:
+          limits:
+            cpu: 100m
+            memory: 256Mi
+          requests:
+            cpu: 80m
+            memory: 128Mi
+  strategy:
+    canary:
+      steps:
+      - setWeight: 20
+      - pause: {}
+      - setWeight: 40
+      - pause: {duration: 10}
+      - setWeight: 60
+      - pause: {duration: 10}
+      - setWeight: 80
+      - pause: {duration: 10}
 {{- end }}
